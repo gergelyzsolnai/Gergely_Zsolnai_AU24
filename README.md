@@ -1,2 +1,0 @@
-# Gergely_Zsolnai_AU24
-Hi! My name is Gergely Zsolnai, and I’m a recent entrant into the world of IT. I have a deep passion for working with data—whether it's uncovering patterns, drawing insights, or solving complex problems through data-driven investigations. I find great satisfaction in using data to tell stories, uncover hidden trends, and solve puzzles. I am always eager to learn new tools and techniques to enhance my understanding of how data can be leveraged for smarter decision-making. Excited to continue exploring this dynamic field and further develop my skills!
