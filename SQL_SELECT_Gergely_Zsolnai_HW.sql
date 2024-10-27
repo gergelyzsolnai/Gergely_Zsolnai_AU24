@@ -102,9 +102,9 @@ GROUP BY full_name, store
 ORDER BY revenue DESC
 LIMIT 3;
 
---I used CTE so i can filter only the last payment by the MAX(p.payment_date) so i will get their last store
---where they got payment so they worked last in that store, and i will filter only those payments where
---they accepted payments.
+--I used CTE so i can filter only the last payment by the MAX(p.payment_date) in an other place, and i can reference for these results
+--so i will get their last store, where they got payment so they worked last in that store, and i will 
+--filter only those payments where they accepted payments.
 
 --2. Which 5 movies were rented more than others (number of rentals), and what's the expected age of 
 --the audience for these movies? 
@@ -155,25 +155,33 @@ LIMIT 10;
 --i order by the year_gap.
 
 --V2: gaps between sequential films per each actor; 
---COMMENT! I know it was option to solve both, i solved it, but only with windows function. 
---Please do not count it. I can do the task only after deadline.
 
-WITH actor_film AS (
+WITH actor_movie AS (
 SELECT a.actor_id, a.first_name || ' ' || a.last_name AS actor_name, 
 f.film_id, 
 f.title, 
 f.release_year, 
-LAG(f.release_year) OVER (PARTITION BY a.actor_id ORDER BY f.release_year) AS previous_release_year
+ROW_NUMBER() OVER (PARTITION BY a.actor_id ORDER BY f.release_year) AS row_order
 FROM actor a
 JOIN film_actor fa ON a.actor_id = fa.actor_id
 JOIN film f ON fa.film_id = f.film_id
 )
 
-SELECT af.actor_id, af.actor_name, MAX(af.release_year - previous_release_year) AS seqfilm_year_gap
-FROM actor_film af
-GROUP BY af.actor_id, af.actor_name
-ORDER BY seqfilm_year_gap DESC;
+SELECT am1.actor_id,
+am1.actor_name,
+am1.title AS previous_movie,
+am1.release_year AS previous_year,
+am2.title AS last_movie,
+am2.release_year AS last_year,
+(am2.release_year - am1.release_year) AS seq_year_gap
+FROM actor_movie am1
+INNER JOIN actor_movie am2 ON am2.actor_id = am1.actor_id
+AND am2.row_order - 1 = am1.row_order
+ORDER BY seq_year_gap DESC;
 
---COMMENT: I get the release year of a movie, that the actor played last and also checks for the previous one
---I subtract the previous_release_year from the release_year and i get the year gap between the last and the one before. 
---I get the maximum gaps by the MAX aggregaration.
+--COMMENT: I made a CTE, because i needed to get the row numbers, so i can check for the last, and for 
+--the previous rows. I used Partition so i can get every actor ordered by their movies' released year. 
+--So every row will be in order. I did an inner self join, so i can get the row orders. 
+--last row is the last movie's datas and last movie's year. 
+--And on the inner join i subtracted one row, so i got the previous movie's data, and release year. 
+--From now i could calculate the year gaps. 
