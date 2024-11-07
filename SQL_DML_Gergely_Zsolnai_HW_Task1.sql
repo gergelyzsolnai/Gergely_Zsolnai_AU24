@@ -1,89 +1,181 @@
---TASK 1
---1. Inserting my top 3 movies 
---2. Inserting my top 3 movies with their data
---3. Inserting the actors and film_id and actor_id to the film_actor table
---4. Inserting movies to the inventory table
---I do the 4 tasks all at once, because i need their ids 
-ROLLBACK;
 BEGIN;
-
 WITH my_top_films AS (
+	SELECT 
+		'The Godfather' as title, 
+		'The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son.' as description,
+		1972 as release_year, 
+		(SELECT l.language_id FROM "language" AS l WHERE l."name" = 'English') AS language_id,
+		1 as rental_duration, 
+		4.99 as rental_rate, 
+		175 as length, 
+		19.99 as replacement_cost, 
+		CURRENT_DATE as last_update
+		UNION ALL
+	SELECT
+		'The Shawshank Redemption' AS title, 
+		'A banker convicted of uxoricide forms a friendship over a quarter century with a hardened convict, while maintaining his innocence and trying to remain hopeful through simple compassion.' AS description,
+		1994 AS release_year, 
+		(SELECT l.language_id FROM "language" AS l WHERE l."name" = 'English') AS language_id,
+		2 AS rental_duration, 
+		9.99 AS rental_rate, 
+		142 AS length, 
+		29.99 AS replacement_cost, 
+		CURRENT_DATE AS last_update
+		UNION ALL
+	SELECT	
+		'Meet Joe Black' AS title, 
+		'Death, who takes the form of a young man killed in an accident, asks a media mogul to act as his guide to teach him about life on Earth and, in the process, he falls in love with the mogul''s daughter.' AS description,
+		1998 AS release_year, 
+		(SELECT l.language_id FROM "language" AS l WHERE l."name" = 'English') AS language_id,
+		3 AS rental_duration, 
+		19.99 AS rental_rate, 
+		178 AS length, 
+		29.99 AS replacement_cost, 
+		CURRENT_DATE AS last_update
+),
+inserted_movies AS ( 
 	INSERT INTO film (title, description, release_year, language_id, rental_duration, rental_rate,
-						length, replacement_cost, rating, last_update)
-	VALUES ('The Godfather', 'The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son.',
-			1972, 1, 1, 4.99, 175, 19.99, 'R', CURRENT_DATE),
-			('The Shawshank Redemption', 'A banker convicted of uxoricide forms a friendship over a quarter century with a hardened convict, while maintaining his innocence and trying to remain hopeful through simple compassion.',
-			1994, 1, 2, 9.99, 142, 29.99, 'R', CURRENT_DATE),
-			('Meet Joe Black', 'Death, who takes the form of a young man killed in an accident, asks a media mogul to act as his guide to teach him about life on Earth and, in the process, he falls in love with the mogul''s daughter.',
-			1998, 1, 3, 19.99, 178, 29.99, 'PG', CURRENT_DATE)
-	RETURNING film_id, title
+						length, replacement_cost, last_update)
+		SELECT 
+			mtf.title,
+			mtf.description, 
+			mtf.release_year, 
+			mtf.language_id, 
+			mtf.rental_duration, 
+			mtf.rental_rate,
+			mtf.length, 
+			mtf.replacement_cost, 
+			mtf.last_update
+		FROM 
+			my_top_films mtf
+		WHERE 
+			NOT EXISTS (
+				SELECT *
+				FROM film AS f
+				WHERE f.title = mtf.title AND f.release_year = mtf.release_year
+			)
+		RETURNING film_id, title
 ),
 my_top_actors AS(
-	INSERT INTO actor (first_name, last_name, last_update)
-	VALUES 	
-		('Marlon', 'Brando', CURRENT_DATE),
-		('Al', 'Pacino', CURRENT_DATE),
-		('Tim', 'Robbins', CURRENT_DATE),
-		('Morgan', 'Freeman', CURRENT_DATE),
-		('Brad', 'Pitt', CURRENT_DATE),
-		('Anthony', 'Hopkins', CURRENT_DATE)
-	RETURNING actor_id, first_name, last_name
+	SELECT 
+		'Marlon' AS first_name, 
+		'Brando' AS last_name, 
+		CURRENT_DATE AS last_update
+		UNION ALL
+	SELECT
+		'Al' AS first_name, 
+		'Pacino' AS last_name, 
+		CURRENT_DATE AS last_update
+		UNION ALL
+	SELECT
+		'Tim' AS first_name, 
+		'Robbins' AS last_name, 
+		CURRENT_DATE AS last_update
+		UNION ALL
+	SELECT
+		'Morgan' AS first_name, 
+		'Freeman' AS last_name, 
+		CURRENT_DATE AS last_update
+		UNION ALL
+	SELECT
+		'Brad' AS first_name, 
+		'Pitt' AS last_name, 
+		CURRENT_DATE AS last_update
+		UNION ALL
+	SELECT
+		'Anthony' AS first_name, 
+		'Hopkins' AS last_name, 
+		CURRENT_DATE AS last_update
 ), 
+inserted_actors AS ( 
+	INSERT INTO actor (first_name, last_name, last_update)
+		SELECT 
+			mta.first_name, 
+			mta.last_name, 
+			mta.last_update
+		FROM
+			my_top_actors mta
+		WHERE 
+			NOT EXISTS (
+				SELECT *
+				FROM actor AS a
+				WHERE a.first_name = mta.first_name AND a.last_name = mta.last_name
+			)
+		RETURNING actor_id, first_name, last_name
+),
 my_top_film_actor AS (
 	INSERT INTO film_actor (film_id, actor_id, last_update)
-		SELECT mtf.film_id, actor_id, CURRENT_DATE
-		FROM my_top_films mtf
-		JOIN my_top_actors mta 
-		ON (mtf.title = 'The Godfather' AND mta.first_name = 'Marlon' AND mta.last_name = 'Brando')
-		OR (mtf.title = 'The Godfather' AND mta.first_name = 'AL' AND mta.last_name = 'Pacino')
-		OR (mtf.title = 'The Shawshank Redemption' AND mta.first_name = 'Tim' AND mta.last_name = 'Robbins')
-		OR (mtf.title = 'The Shawshank Redemption' AND mta.first_name = 'Morgan' AND mta.last_name = 'Freeman')
-		OR (mtf.title = 'Meet Joe Black' AND mta.first_name = 'Brad' AND mta.last_name = 'Pitt')
-		OR (mtf.title = 'Meet Joe Black' AND mta.first_name = 'Anthony' AND mta.last_name = 'Hopkins')
+		SELECT 
+		im.film_id, 
+		ia.actor_id, 
+		CURRENT_DATE
+		FROM inserted_movies im
+		JOIN inserted_actors ia 
+		ON (im.title = 'The Godfather' AND ia.first_name = 'Marlon' AND ia.last_name = 'Brando')
+		OR (im.title = 'The Godfather' AND ia.first_name = 'AL' AND ia.last_name = 'Pacino')
+		OR (im.title = 'The Shawshank Redemption' AND ia.first_name = 'Tim' AND ia.last_name = 'Robbins')
+		OR (im.title = 'The Shawshank Redemption' AND ia.first_name = 'Morgan' AND ia.last_name = 'Freeman')
+		OR (im.title = 'Meet Joe Black' AND ia.first_name = 'Brad' AND ia.last_name = 'Pitt')
+		OR (im.title = 'Meet Joe Black' AND ia.first_name = 'Anthony' AND ia.last_name = 'Hopkins')
 	WHERE NOT EXISTS (
 		SELECT 1 FROM film_actor fa
-		WHERE mtf.film_id = fa.film_id AND mta.actor_id = fa.actor_id
+		WHERE im.film_id = fa.film_id AND ia.actor_id = fa.actor_id
 	)
 	RETURNING film_id, actor_id
-)
-
-INSERT INTO inventory (film_id, store_id)
-	SELECT film_id, 2
+),
+inserted_inventory AS (
+	INSERT INTO inventory (film_id, store_id)
+	SELECT 
+		im.film_id,
+		(SELECT store_id FROM store ORDER BY store_id LIMIT 1)
 	FROM
-	my_top_films mtf
-	WHERE NOT EXISTS (
-	SELECT 1 FROM inventory i
-	WHERE mtf.film_id = i.film_id AND i.store_id = 2
+		inserted_movies im
+	WHERE 
+		NOT EXISTS (
+		SELECT 1 FROM inventory i
+	WHERE im.film_id = i.film_id AND i.store_id = (SELECT store_id FROM store ORDER BY store_id LIMIT 1)
+		)
+	RETURNING inventory_id
 	)
-RETURNING inventory_id;
-
+SELECT * FROM inserted_inventory;
+SAVEPOINT inserted_movies_actors_inventory;
 COMMIT;
 
---I had to insert the movies and actor together, because i needed their film_id, and actor_id to grab them, 
---and insert them to the film_actor table. 
---I didn't want to hardcode, so i used Returning: 
--- - for film_id and title together, because it will be needed for film_actor and inventory table. 
--- - for actor_id, first_name, and last_name, because i needed them for film_actor table
---I Used Begin, because i had to do the inserting all at once, but step-by-step, and the Commit for saving
---purposes.
---WHERE NOT EXISTS checks if the same ids (film_id with actor_id) and (film_id and store_id) combined are already in the database
---And the end i start my last insertion to the inventory table, using the film_id, inserting to store_id 2.
---I check if there is any film_id and store_id combined together and exists in the database. 
-		
---5. Updating a customer to my datas: 87-id
-UPDATE customer
-SET
-	first_name = 'Gergely',
-	last_name = 'Zsolnai',
-	email = 'zsolnai.gergely84@gmail.com'
-WHERE 
-	customer_id = 87;
-	
---6. Removing any records related to me (as a customer) from all tables except 'Customer' and 'Inventory'
-BEGIN;
 
-DELETE 
-FROM 
+
+BEGIN;
+WITH find_customer AS (
+	SELECT 
+		c.customer_id
+	FROM
+		customer c
+	JOIN payment p 
+		ON c.customer_id = p.customer_id
+	JOIN rental r
+		ON p.customer_id = r.customer_id
+	GROUP BY 
+		c.customer_id
+	HAVING 
+		COUNT(DISTINCT r.rental_id) >= 43 AND
+		COUNT(DISTINCT p.payment_id)>= 43
+	LIMIT 1
+),
+updated_customer AS (
+	UPDATE customer 
+	SET
+		first_name = 'Gergely',
+		last_name = 'Zsolnai',
+		email = 'zsolnai.gergely84@gmail.com',
+		address_id = (SELECT address_id 
+				  	FROM address 
+				  	WHERE district = 'Texas'
+				  	LIMIT 1)
+	WHERE 
+		customer_id = (SELECT customer_id FROM find_customer)
+	RETURNING customer_id
+),
+deleted_payments AS (
+DELETE FROM 
 	payment
 WHERE 
 	rental_id IN (
@@ -92,29 +184,19 @@ WHERE
 		FROM
 			rental
 		WHERE
-			customer_id = 87
-		);
-
-DELETE 
-FROM 
+			customer_id = (SELECT customer_id FROM find_customer)
+		) 
+	RETURNING payment_id
+),
+deleted_rentals AS (
+DELETE FROM
 	rental
 WHERE 
-	customer_id = 87;
-	
-COMMIT;
+	customer_id = (SELECT customer_id FROM find_customer)
+RETURNING rental_id
+),
 
---I had to do it that way, because I couldn't delete one-by-one, because these 2 tables' records were
---linked together by their foreign keys. Had to do it together.
-
---7. Rent you favorite movies from the store they are in and pay for them (add corresponding records to the 
---database to represent this activity) 
---(Note: to insert the payment_date into the table payment, you can create a new partition 
---(see the scripts to install the training database ) or add records for the first half of 2017)
-
-ROLLBACK;
-BEGIN;
-
-WITH fav_movies_inv AS (
+fav_movies_inv AS (
     SELECT 
         i.inventory_id, 
         f.title,
@@ -125,7 +207,7 @@ WITH fav_movies_inv AS (
         film f ON i.film_id = f.film_id
     WHERE 
         f.title IN ('The Godfather', 'The Shawshank Redemption', 'Meet Joe Black')
-        AND i.store_id = 2
+        AND i.store_id = (SELECT store_id FROM store ORDER BY store_id LIMIT 1)
 ),
 
 my_rentals AS (
@@ -137,17 +219,17 @@ my_rentals AS (
             WHEN fmi.title = 'Meet Joe Black' THEN TIMESTAMP '2017-02-15 13:46:21.914+01'
         END AS rental_date,
         fmi.inventory_id,
-        87 AS customer_id,
-        2 AS staff_id,
-        CURRENT_DATE
+        (SELECT customer_id FROM find_customer) AS customer_id,
+        (SELECT staff_id FROM staff ORDER BY store_id LIMIT 1) AS staff_id,
+        CURRENT_DATE AS last_update
     FROM fav_movies_inv fmi
     RETURNING rental_id, inventory_id, rental_date
 )
 
 INSERT INTO payment (customer_id, staff_id, rental_id, amount, payment_date)
 SELECT 
-    87 AS customer_id,
-    2 AS staff_id,
+    (SELECT customer_id FROM find_customer) AS customer_id,
+    (SELECT staff_id FROM staff ORDER BY store_id LIMIT 1) AS staff_id,
     mr.rental_id,
 	fmi.rental_rate AS amount,
     mr.rental_date AS payment_date
@@ -155,10 +237,6 @@ FROM
     my_rentals mr
 JOIN 
     fav_movies_inv fmi ON mr.inventory_id = fmi.inventory_id;
-
+SAVEPOINT inserting_my_rentals_payments;
 COMMIT;
 
---I made the fav_movies_inv CTE to get the inventory_id, title, (and rental_rate, which i need in the end) which i used in my_rentals
---table, which i want to insert in CTE. I get the rental_id, and rental_date for my inserted payment table.
---I use the rental_id, and rental_date for payment_date and i use the rental_rates' of the movies, so i can
---get the amount.
