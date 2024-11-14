@@ -1,7 +1,11 @@
+begin;
 create database political_campaign;
 
 
-create schema political_schema;
+create schema  if not exists political_schema;
+commit;
+
+begin;
 
 create table if not exists political_schema.address (
 	address_id serial primary key,
@@ -160,7 +164,9 @@ create table if not exists political_schema.event_participant (
 	CONSTRAINT event_Fkey FOREIGN KEY (event_id) REFERENCES political_schema.event (event_id)
 );
 
+commit;
 
+begin;
 
 
 alter table political_schema.address add column record_ts DATE DEFAULT CURRENT_DATE;
@@ -179,7 +185,9 @@ alter table political_schema.measure_event add column record_ts DATE DEFAULT CUR
 alter table political_schema.opponent_measure add column record_ts DATE DEFAULT CURRENT_DATE;
 alter table political_schema.event_participant add column record_ts DATE DEFAULT CURRENT_DATE;
 
+commit;
 
+begin;
 
 insert into political_schema.address (country, city, zip_code, address)
 	select 'Hungary', 'Szeged', '6723', 'Malom street 13/A'
@@ -352,7 +360,8 @@ insert into political_schema.contribution_finance (contributor_id, finance_id)
 		where not exists (
 			select 1 from political_schema.contribution_finance
 				where contributor_id = (SELECT contributor_id FROM political_schema.contributor WHERE upper(first_name) = 'TINA' AND UPPER(last_name) = 'SMITH' and email = 'tina.smith@example.com')
-				and finance_id = (SELECT finance_id FROM political_schema.finance WHERE expense_description = 'Contributors event' and campaign_id = (SELECT campaign_id from political_schema.campaign WHERE name = 'Fundraising november')));
+				and finance_id = (SELECT finance_id FROM political_schema.finance WHERE expense_description = 'Contributors event' and campaign_id = (SELECT campaign_id from political_schema.campaign WHERE name = 'Fundraising november')))
+	returning *;
 
 insert into political_schema.event (campaign_id, event_type, event_date, location, description)
 	SELECT
@@ -524,6 +533,8 @@ insert into political_schema.event_participant (event_id, volunteer_id)
 				where event_id = (SELECT event_id FROM political_schema.event WHERE event_type = 'town_hall' AND event_date = cast('2024-11-20 18:00:00' as timestamp))
 				and volunteer_id = (SELECT volunteer_id FROM political_schema.volunteer WHERE upper(first_name) = 'HUGH' AND UPPER(last_name) = 'COLEMAN'))
 	returning event_participant_id;
+
+commit;
 	
 --I do not know why it doesn't want to accept the dates and timestamps... I had to cast them manually. 
 --I hope you accept it, but if not, i will have more time to find out. Now i have to start working on the current homework 
