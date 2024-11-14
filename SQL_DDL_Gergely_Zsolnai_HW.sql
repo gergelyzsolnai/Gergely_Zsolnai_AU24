@@ -1,4 +1,4 @@
-create database political_campaign_10;
+create database political_campaign;
 
 
 create schema political_schema;
