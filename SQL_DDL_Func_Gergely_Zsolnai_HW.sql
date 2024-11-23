@@ -35,6 +35,11 @@ select * from valid_data;
 
 raise exception 'There is no sales revenue for the current year or quarter';
 
+
+--Description: I grouped by the film category, and summing the amount so i get the total_sales_revenue_by_year.
+--Also i am summing the amount for the quarter, which i get with the extract. 
+
+
 --example: select * from sales_revenue_by_category_qtr;
 --Task 2. Create a query language functions
 	
@@ -55,7 +60,7 @@ begin
 		LOWER(c.name) as film_category,
 		sum(p.amount) as total_sales_revenue_by_year,
 		SUM(case
-				when extract(quarter from p.payment_date) = extract(quarter from input_DATE)
+				when extract(quarter from p.payment_date) = extract(quarter from input_DATE)  --retrieve those payment dates that were specified in the function input_date
 					then p.amount
 				else 0	
 		end
@@ -83,9 +88,13 @@ $$ language plpgsql;
 
 --example: select * from get_sales_revenue_by_category_qtr('2017-01-20');
 
+--Description: First we check if the date is null, and we write this error message: 'You did not write a valid date'
+--We are summing the p.amount for the yearly revenue by each category (because of the group by), and we get the amount (rental revenue) 
+--for the current quarter as well.
+
 --Task 3. Create procedure language functions
 
---DROP FUNCTION most_popular_films_by_countries(text[]);
+DROP FUNCTION most_popular_films_by_countries(text[]);
 
 create OR REPLACE function public.most_popular_films_by_countries(input_country text[])
 returns table (
@@ -101,7 +110,7 @@ as $$
 begin
 	return QUERY
 	select 
-		distinct on UPPER((cy.country)) UPPER(cy.country)::TEXT as Country, 
+		distinct on (UPPER(cy.country)) UPPER(cy.country)::TEXT as Country,  --I only wanted unique countries
 		f.title::VARCHAR(200) as Film, 
 		count(r.rental_id)::numeric as Rents,
 		f.rating::public.mpaa_rating as Rating,
@@ -118,7 +127,7 @@ begin
 	join public.city ci on a.city_id = ci.city_id 
 	join public.country cy on ci.country_id = cy.country_id 
 	WHERE 
-		UPPER(cy.country) = any(array(select upper(input_country))))
+		upper(cy.country) = ANY(ARRAY(SELECT UPPER(c) FROM UNNEST(input_country) c))  
 	group by 
         cy.country, 
         f.title,
@@ -127,12 +136,16 @@ begin
         f.length, 
         f.release_year
 	order by 
-		cy.country,
+		upper(cy.country),
 		COUNT(r.rental_id) desc;
 end;
 $$ language plpgsql;		
 		
---example: select * from most_popular_films_by_countries(ARRAY['Afghanistan', 'China']);
+--example: select * from most_popular_films_by_countries(ARRAY['afghanistan', 'China']);
+
+--Description: I had to use array(), so we can search for many countries. The unnest breaks this array to pieces, after 
+--we put these items to uppercase, so we will put everything to uppercase, so our searching won't be case sensitive.
+
 
 --Task 4. Create procedure language functions
 --DROP FUNCTION IF EXISTS films_in_stock_by_title(TEXT);
@@ -219,6 +232,15 @@ $$ LANGUAGE plpgsql;
 
 --select * from films_in_stock_by_title('love');
 
+--Description: Getting the row_num column, we select the count(*) to get the number of rows, and because we get unique film titles, we will get the row numbers counted.
+--We are filtering for those films, which has not been returned by the r.return_date is NULL. Also we are searching and ordering the rentals by the rental_date, limiting with 1
+--so we will see the last rental's record's (dates, customer name)
+--I used: LOWER(f.title) LIKE LOWER('%' || input_title || '%') because we can filter for a partial name of a film, lowering the title name, 
+--so searching won't be case sensitive.
+--I had to filter with this: WHERE film_id = f.film_id in the rental_date query and the customer_name query. This part filters the 
+--inventory and rental data to include only the information related to all instances of the given movie 
+
+
 --5. task:
 --DROP FUNCTION IF EXISTS new_movie(TEXT, INT, TEXT);
 
@@ -271,3 +293,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 --select * from new_movie('Lilo', 2024, 'English');
+
+--description: When i am inserting a new movie, and no language and release year are added in input, i defaulted the current date (extracting it to only year)
+--Also defaulting 'Klingon'. With IF language_id2 IS NULL THEN INSERT INTO public.language(name), we put the defaulted language (Klingon) into our langage table
+--I am selecting the language_id and storing it into the language_id2
